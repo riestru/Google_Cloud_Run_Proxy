@@ -12,7 +12,7 @@ echo ""
 
 # 2. Включить необходимые API
 echo "Включаю необходимые API..."
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project="$PROJECT_ID"
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com cloudresourcemanager.googleapis.com --project="$PROJECT_ID"
 echo ""
 
 # 3. Имя сервиса
