@@ -21,9 +21,9 @@ echo ""
 
 # 4. Регион
 echo "Выбери регион:"
-echo "  1) europe-west1     (Belgium)   — для ВПС в СПб/Европе"
-echo "  2) europe-north1    (Finland)   — для ВПС в Финляндии/Швеции"
-echo "  3) northamerica-northeast1 (Montreal) — для ВПС в Канаде"
+echo "  1) europe-west1              (Belgium)  — для ВПС в СПб/Европе"
+echo "  2) europe-north1             (Finland)  — для ВПС в Финляндии/Швеции"
+echo "  3) northamerica-northeast1   (Montreal) — для ВПС в Канаде"
 echo "  4) Ввести вручную"
 read -p "Твой выбор (1-4): " REGION_CHOICE
 
@@ -60,6 +60,29 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances=1 \
   --concurrency=1000 \
   --timeout=3600 \
+  --no-cpu-boost \
+  --project="$PROJECT_ID"
+
+# Фиксируем maxScale на уровне сервиса
+echo "Фиксирую maxScale=1 на уровне сервиса..."
+gcloud run services update "$SERVICE_NAME" \
+  --region="$REGION" \
+  --update-annotations=run.googleapis.com/maxScale=1 \
+  --project="$PROJECT_ID"
+
+# Исправляем startupProbe через YAML
+echo "Исправляю startupProbe..."
+gcloud run services describe "$SERVICE_NAME" \
+  --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --format=yaml > /tmp/svc.yaml
+
+sed -i 's/timeoutSeconds: 240/timeoutSeconds: 10/g' /tmp/svc.yaml
+sed -i 's/periodSeconds: 240/periodSeconds: 10/g' /tmp/svc.yaml
+sed -i 's/failureThreshold: 1/failureThreshold: 3/g' /tmp/svc.yaml
+
+gcloud run services replace /tmp/svc.yaml \
+  --region="$REGION" \
   --project="$PROJECT_ID"
 
 echo ""
