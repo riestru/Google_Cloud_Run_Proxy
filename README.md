@@ -4,6 +4,10 @@
 
 ```
 docker.io/praveenkarunarathne/google-cloud-run-proxy
+
+docker.io/riestru/google-cloud-run-proxy
+or
+docker.io/riestru/google-cloud-run-proxy:latest
 ```
 
 ## Environment Variable Name
