@@ -20,7 +20,6 @@ func main() {
 		"/panelws1": os.Getenv("V2RAY_SERVER_IP1") + ":8183",
 		"/panelws2": os.Getenv("V2RAY_SERVER_IP2") + ":8184",
 		"/panelws3": os.Getenv("V2RAY_SERVER_IP3") + ":8185",
-		"/panelws4": os.Getenv("V2RAY_SERVER_IP4") + ":8186",
 		"/panelws5": os.Getenv("V2RAY_SERVER_IP5") + ":8187",
 	}
 
