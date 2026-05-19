@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
 var routes map[string]string
@@ -41,51 +42,52 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	target, ok := routes[r.URL.Path]
 	if !ok {
-		log.Printf("No route for path: %s", r.URL.Path)
 		http.Error(w, "Not found", 404)
 		return
 	}
 
-	if target == ":8183" || target == ":8184" || target == ":8185" || target == ":8186" || target == ":8187" {
-		log.Printf("Empty IP for path: %s", r.URL.Path)
-		http.Error(w, "Backend not configured", 503)
-		return
-	}
-
-	log.Printf("Connecting to %s for path %s", target, r.URL.Path)
-
-	dst, err := net.Dial("tcp", target)
+	// Подключаемся к бэкенду с таймаутом
+	dst, err := net.DialTimeout("tcp", target, 10*time.Second)
 	if err != nil {
 		log.Printf("Failed to connect to %s: %v", target, err)
 		http.Error(w, "Backend unavailable", 502)
 		return
 	}
-	defer dst.Close()
+
+	// Устанавливаем дедлайн на соединение — 2 часа максимум
+	dst.SetDeadline(time.Now().Add(2 * time.Hour))
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		log.Printf("Hijacking not supported")
+		dst.Close()
 		http.Error(w, "Hijacking not supported", 500)
 		return
 	}
 
 	src, _, err := hijacker.Hijack()
 	if err != nil {
+		dst.Close()
 		log.Printf("Hijack failed: %v", err)
 		return
 	}
-	defer src.Close()
 
+	// Устанавливаем дедлайн и на клиентское соединение
+	src.SetDeadline(time.Now().Add(2 * time.Hour))
+
+	// Пересылаем HTTP запрос на бэкенд
 	r.Write(dst)
 
+	// Двунаправленный туннель
 	done := make(chan struct{}, 2)
 	go func() {
+		defer func() { done <- struct{}{} }()
 		io.Copy(dst, src)
-		done <- struct{}{}
+		dst.Close()
 	}()
 	go func() {
+		defer func() { done <- struct{}{} }()
 		io.Copy(src, dst)
-		done <- struct{}{}
+		src.Close()
 	}()
 	<-done
 }
