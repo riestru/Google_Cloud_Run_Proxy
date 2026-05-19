@@ -46,7 +46,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Подключаемся к бэкенду с таймаутом
+	// Подключаемся к бэкенду с таймаутом 10 секунд
 	dst, err := net.DialTimeout("tcp", target, 10*time.Second)
 	if err != nil {
 		log.Printf("Failed to connect to %s: %v", target, err)
@@ -54,8 +54,11 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Устанавливаем дедлайн на соединение — 2 часа максимум
-	dst.SetDeadline(time.Now().Add(2 * time.Hour))
+	// Включаем TCP keepalive на соединении к бэкенду
+	if tcpDst, ok := dst.(*net.TCPConn); ok {
+		tcpDst.SetKeepAlive(true)
+		tcpDst.SetKeepAlivePeriod(30 * time.Second)
+	}
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
@@ -71,8 +74,11 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Устанавливаем дедлайн и на клиентское соединение
-	src.SetDeadline(time.Now().Add(2 * time.Hour))
+	// Включаем TCP keepalive на соединении клиента
+	if tcpSrc, ok := src.(*net.TCPConn); ok {
+		tcpSrc.SetKeepAlive(true)
+		tcpSrc.SetKeepAlivePeriod(30 * time.Second)
+	}
 
 	// Пересылаем HTTP запрос на бэкенд
 	r.Write(dst)
