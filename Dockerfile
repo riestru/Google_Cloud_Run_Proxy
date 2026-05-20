@@ -1,9 +1,11 @@
-FROM golang:1.22-alpine AS build
-WORKDIR /app
-COPY main.go .
-RUN go mod init proxy && go build -ldflags="-s -w" -o proxy main.go
+FROM nginx:1.27-alpine
 
-FROM gcr.io/distroless/static
-COPY --from=build /app/proxy /proxy
+RUN apk add --no-cache gettext
+
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+
+RUN mkdir -p /etc/nginx/templates
+
 EXPOSE 8080
-ENTRYPOINT ["/proxy"]
+
+CMD ["/bin/sh", "-c", "envsubst '$V2RAY_SERVER_IP1 $V2RAY_SERVER_IP2 $V2RAY_SERVER_IP3 $V2RAY_SERVER_IP5' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -t && nginx -g 'daemon off;'"]
